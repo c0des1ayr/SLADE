@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -165,8 +165,8 @@ AudioEntryPanel::AudioEntryPanel(wxWindow* parent) :
 // -----------------------------------------------------------------------------
 AudioEntryPanel::~AudioEntryPanel()
 {
-	// Stop the timer to avoid crashes
-	timer_seek_.Stop();
+	timer_seek_.Stop();       // Stop the timer to avoid crashes
+	music_->allowSeek(false); // Needed to avoid a crash in SFML with ogg files
 	resetStream();
 }
 

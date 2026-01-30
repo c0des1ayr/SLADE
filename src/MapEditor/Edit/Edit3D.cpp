@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -355,6 +355,8 @@ void Edit3D::changeSectorHeight(int amount) const
 		{
 			// Get sector
 			auto sector = context_.map().side(item.index)->sector();
+			if (!sector)
+				continue;
 
 			// Check this sector's ceiling hasn't already been changed
 			int index = sector->index();
@@ -375,6 +377,8 @@ void Edit3D::changeSectorHeight(int amount) const
 
 			// Get sector
 			MapSector* sector = context_.map().sector(item.index);
+			if (!sector)
+				continue;
 
 			if (floor)
 			{

@@ -1,7 +1,8 @@
+#if !wxCHECK_VERSION(3, 3, 0)
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2025 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -228,3 +229,5 @@ bool WxWebpHandler::DoCanRead(wxInputStream& stream)
 	}
 	return std::string(buffer, 4) == riff && std::string(&buffer[8], 4) == webp;
 }
+
+#endif

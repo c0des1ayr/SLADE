@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -33,6 +33,7 @@
 #include "Main.h"
 #include "App.h"
 #include "Archive/ArchiveManager.h"
+#include "Audio/MIDIPlayer.h"
 #include "Game/Configuration.h"
 #include "General/Clipboard.h"
 #include "General/ColourConfiguration.h"
@@ -61,7 +62,6 @@
 #include "Utility/StringUtils.h"
 #include "Utility/Tokenizer.h"
 #include <dumb.h>
-#include <filesystem>
 #ifdef __WXOSX__
 #include <ApplicationServices/ApplicationServices.h>
 #endif
@@ -84,7 +84,7 @@ std::thread::id main_thread_id;
 bool            win_darkmode_enabled = false;
 
 // Version
-Version version_num{ 3, 2, 7, 0 };
+Version version_num{ 3, 2, 11, 0 };
 
 // Directory paths
 string dir_data;
@@ -607,11 +607,20 @@ void app::saveConfigFile()
 	// ReSharper disable CppExpressionWithoutSideEffects
 
 	// Open SLADE.cfg for writing text
-	SFile file(app::path("slade3.cfg", app::Dir::User), SFile::Mode::Write);
+	auto  cfg_path = app::path("slade3.cfg", app::Dir::User);
+	SFile file(cfg_path, SFile::Mode::Write);
 
-	// Do nothing if it didn't open correctly
+	// Show error message if it didn't open correctly
 	if (!file.isOpen())
+	{
+		log::error("Failed to open slade3.cfg for writing");
+		wxMessageBox(
+			WX_FMT(
+				"Failed to open the SLADE configuration file ({}) for writing, settings will not be saved!", cfg_path),
+			wxS("Error"),
+			wxICON_ERROR);
 		return;
+	}
 
 	// Write cfg header
 	file.writeStr("/*****************************************************\n");
@@ -709,16 +718,14 @@ void app::exit(bool save_config)
 	// Clean up
 	drawing::cleanupFonts();
 	gl::Texture::clearAll();
+	audio::resetMIDIPlayer();
 
 	// Clear temp folder
-	std::error_code error;
-	for (auto& item : std::filesystem::directory_iterator{ app::path("", app::Dir::Temp) })
+	auto temp_files = fileutil::allFilesInDir(path("", Dir::Temp), true, true);
+	for (const auto& file : temp_files)
 	{
-		if (!item.is_regular_file())
-			continue;
-
-		if (!std::filesystem::remove(item, error))
-			log::warning("Could not clean up temporary file \"{}\": {}", item.path().string(), error.message());
+		if (!fileutil::removeFile(file))
+			log::warning("Could not clean up temporary file \"{}\"", file);
 	}
 
 #ifndef NO_LUA

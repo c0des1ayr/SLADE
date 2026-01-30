@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -712,6 +712,19 @@ StyleSet* StyleSet::set(unsigned index)
 }
 
 // -----------------------------------------------------------------------------
+// Returns the style set matching [name], or nullptr if no match was found
+// -----------------------------------------------------------------------------
+StyleSet* StyleSet::set(string_view name)
+{
+	// Search for set matching name
+	for (auto& style_set : style_sets)
+		if (strutil::equalCI(style_set->name_, name))
+			return style_set.get();
+
+	return nullptr;
+}
+
+// -----------------------------------------------------------------------------
 // Adds [stc] to the current list of text editors
 // -----------------------------------------------------------------------------
 void StyleSet::addEditor(TextEditorCtrl* stc)
@@ -842,10 +855,11 @@ bool StyleSet::loadCustomStyles()
 {
 	// If the custom stylesets directory doesn't exist, create it
 	auto custom_dir = app::path("text_styles", app::Dir::User);
-	fileutil::createDir(custom_dir);
+	if (!fileutil::dirExists(custom_dir))
+		fileutil::createDir(custom_dir);
 
 	// Go through each file in the directory
-	for (const auto& path : fileutil::allFilesInDir(custom_dir))
+	for (const auto& path : fileutil::allFilesInDir(custom_dir, true, true))
 	{
 		// Read file into tokenizer
 		Tokenizer tz;

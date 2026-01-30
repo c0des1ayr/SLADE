@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2017 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -35,11 +35,9 @@
 #include "FileUtils.h"
 #include "App.h"
 #include "StringUtils.h"
-#include <filesystem>
 #include <fstream>
 
 using namespace slade;
-namespace fs = std::filesystem;
 
 
 // -----------------------------------------------------------------------------
@@ -47,6 +45,32 @@ namespace fs = std::filesystem;
 // FileUtil Namespace Functions
 //
 // -----------------------------------------------------------------------------
+namespace slade::fileutil
+{
+// -----------------------------------------------------------------------------
+// Converts a string_view to wxString using UTF-8 encoding
+// -----------------------------------------------------------------------------
+inline wxString fromUtf8(string_view str)
+{
+#if wxCHECK_VERSION(3, 3, 0)
+	return wxString::FromUTF8(str);
+#else
+	return wxString::FromUTF8(str.data(), str.size());
+#endif
+}
+
+// -----------------------------------------------------------------------------
+// Returns the platform-specific path separator
+// -----------------------------------------------------------------------------
+inline string pathSeparator()
+{
+#ifdef __WXMSW__
+	return "\\";
+#else
+	return "/";
+#endif
+}
+} // namespace slade::fileutil
 
 
 // -----------------------------------------------------------------------------
@@ -54,16 +78,7 @@ namespace fs = std::filesystem;
 // -----------------------------------------------------------------------------
 bool fileutil::fileExists(string_view path)
 {
-	try
-	{
-		auto fs_path = fs::u8path(path);
-		return fs::exists(fs_path) && fs::is_regular_file(fs_path);
-	}
-	catch (std::exception& ex)
-	{
-		log::error("Error checking if file \"{}\" exists: {}", path, ex.what());
-		return false;
-	}
+	return !path.empty() && wxFileExists(fromUtf8(path));
 }
 
 // -----------------------------------------------------------------------------
@@ -71,16 +86,7 @@ bool fileutil::fileExists(string_view path)
 // -----------------------------------------------------------------------------
 bool fileutil::dirExists(string_view path)
 {
-	try
-	{
-		auto fs_path = fs::u8path(path);
-		return fs::exists(fs_path) && fs::is_directory(fs_path);
-	}
-	catch (std::exception& ex)
-	{
-		log::error("Error checking if dir \"{}\" exists: {}", path, ex.what());
-		return false;
-	}
+	return !path.empty() && wxDirExists(fromUtf8(path));
 }
 
 // -----------------------------------------------------------------------------
@@ -88,6 +94,9 @@ bool fileutil::dirExists(string_view path)
 // -----------------------------------------------------------------------------
 bool fileutil::validExecutable(string_view path)
 {
+	if (path.empty())
+		return false;
+
 	// Special handling for macOS .app dir
 	if (app::platform() == app::Platform::MacOS)
 	{
@@ -118,14 +127,7 @@ bool fileutil::validExecutable(string_view path)
 // -----------------------------------------------------------------------------
 bool fileutil::removeFile(string_view path)
 {
-	static std::error_code ec;
-	if (!fs::remove(fs::u8path(path), ec))
-	{
-		log::warning("Unable to remove file \"{}\": {}", path, ec.message());
-		return false;
-	}
-
-	return true;
+	return !path.empty() && wxRemoveFile(fromUtf8(path));
 }
 
 // -----------------------------------------------------------------------------
@@ -134,15 +136,10 @@ bool fileutil::removeFile(string_view path)
 // -----------------------------------------------------------------------------
 bool fileutil::copyFile(string_view from, string_view to, bool overwrite)
 {
-	static std::error_code ec;
-	auto                   options = overwrite ? fs::copy_options::overwrite_existing : fs::copy_options::none;
-	if (!fs::copy_file(fs::u8path(from), fs::u8path(to), options, ec))
-	{
-		log::warning("Unable to copy file from \"{}\" to \"{}\": {}", from, to, ec.message());
+	if (from.empty() || to.empty())
 		return false;
-	}
 
-	return true;
+	return wxCopyFile(fromUtf8(from), fromUtf8(to), overwrite);
 }
 
 // -----------------------------------------------------------------------------
@@ -191,16 +188,7 @@ bool fileutil::writeStringToFile(const string& str, const string& path)
 // -----------------------------------------------------------------------------
 bool fileutil::createDir(string_view path)
 {
-	static std::error_code ec;
-	if (!fs::create_directory(fs::u8path(path), ec))
-	{
-		if (ec.value() != 0)
-			log::warning("Unable to create directory \"{}\": {}", path, ec.message());
-
-		return false;
-	}
-
-	return true;
+	return !path.empty() && wxMkdir(fromUtf8(path));
 }
 
 // -----------------------------------------------------------------------------
@@ -209,14 +197,7 @@ bool fileutil::createDir(string_view path)
 // -----------------------------------------------------------------------------
 bool fileutil::removeDir(string_view path)
 {
-	static std::error_code ec;
-	if (!fs::remove_all(fs::u8path(path), ec))
-	{
-		log::warning("Unable to remove directory \"{}\": {}", path, ec.message());
-		return false;
-	}
-
-	return true;
+	return !path.empty() && wxDir::Remove(fromUtf8(path), wxPATH_RMDIR_RECURSIVE);
 }
 
 // -----------------------------------------------------------------------------
@@ -230,20 +211,19 @@ vector<string> fileutil::allFilesInDir(string_view path, bool include_subdirs, b
 {
 	vector<string> paths;
 
-	if (!dirExists(path))
+	if (path.empty())
 		return paths;
 
-	if (include_subdirs)
+	wxArrayString all_files;
+	wxDir::GetAllFiles(
+		fromUtf8(path), &all_files, wxEmptyString, include_subdirs ? wxDIR_FILES | wxDIR_DIRS : wxDIR_FILES);
+
+	for (const auto& file : all_files)
 	{
-		for (const auto& item : fs::recursive_directory_iterator(fs::u8path(path)))
-			if (item.is_regular_file() || item.is_directory() && include_dir_paths)
-				paths.push_back(item.path().u8string());
-	}
-	else
-	{
-		for (const auto& item : fs::directory_iterator(fs::u8path(path)))
-			if (item.is_regular_file() || item.is_directory() && include_dir_paths)
-				paths.push_back(item.path().u8string());
+		if (include_dir_paths)
+			paths.push_back(file.utf8_string());
+		else
+			paths.push_back(strutil::replace(file.utf8_string(), path, ""));
 	}
 
 	return paths;
@@ -255,16 +235,66 @@ vector<string> fileutil::allFilesInDir(string_view path, bool include_subdirs, b
 // -----------------------------------------------------------------------------
 time_t fileutil::fileModifiedTime(string_view path)
 {
-#if 0
-	// Use this whenever we update to C++20
-	const auto file_time = std::filesystem::last_write_time(path);
-	const auto sys_time  = std::chrono::clock_cast<std::chrono::system_clock>(file_time);
-	return std::chrono::system_clock::to_time_t(sys_time);
-#endif
+	if (path.empty())
+		return 0;
 
-	return wxFileModificationTime(wxString::FromUTF8(path.data(), path.size()));
+	return wxFileModificationTime(fromUtf8(path));
 }
 
+// -----------------------------------------------------------------------------
+// Searches the system PATH for an executable named [exe_name].
+// Returns the full path to the executable if found, or an empty string if not
+// -----------------------------------------------------------------------------
+string fileutil::findExecutable(string_view exe_name, string_view bundle_dir)
+{
+	if (exe_name.empty())
+		return {};
+
+	// Check for bundled tool executable
+	if (!bundle_dir.empty() && app::platform() == app::Platform::Windows)
+	{
+		auto exe_path = app::path(fmt::format("tools/{}/{}", bundle_dir, exe_name), app::Dir::Executable);
+
+		// Append .exe if not present
+		if (!strutil::endsWithCI(exe_path, ".exe"))
+			exe_path += ".exe";
+
+		// Check if it exists
+		if (fileExists(exe_path))
+			return exe_path;
+	}
+
+	// Get system PATH environment variable
+	auto path_env = std::getenv("PATH");
+	if (!path_env)
+		return {};
+
+	// Remove * suffix or prefix from exe_name
+	if (strutil::startsWith(exe_name, '*'))
+		exe_name.remove_prefix(1);
+	if (strutil::endsWith(exe_name, '*'))
+		exe_name.remove_suffix(1);
+
+	// Split PATH into individual paths
+	auto path_str = string{ path_env };
+	auto paths    = strutil::split(path_str, (app::platform() == app::Platform::Windows) ? ';' : ':');
+
+	// Check each path for the executable
+	for (const auto& p : paths)
+	{
+		auto path = fmt::format("{}{}{}", p, pathSeparator(), exe_name);
+
+		// Append .exe on Windows if not present
+		if (app::platform() == app::Platform::Windows && !strutil::endsWithCI(path, ".exe"))
+			path += ".exe";
+
+		// Check if file exists and is executable
+		if (wxFileName::IsFileExecutable(fromUtf8(path)))
+			return path;
+	}
+
+	return {};
+}
 
 
 // -----------------------------------------------------------------------------
@@ -391,7 +421,6 @@ bool SFile::read(string& str, unsigned count) const
 	{
 		str.resize(count);
 		auto c = fread(&str[0], 1, count, handle_);
-		str.push_back('\0');
 		return c > 0;
 	}
 

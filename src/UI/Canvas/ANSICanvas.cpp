@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -108,6 +108,18 @@ void ANSICanvas::writeRGBAData(uint8_t* dest) const
 		dest[j + 2] = c.b;
 		dest[j + 3] = 0xFF;
 	}
+}
+
+// -----------------------------------------------------------------------------
+// Loads ANSI [data]
+// -----------------------------------------------------------------------------
+void ANSICanvas::loadData(uint8_t* data)
+{
+	ansidata_ = data;
+
+	// Clear texture
+	gl::Texture::clear(tex_image_);
+	tex_image_ = 0;
 }
 
 // -----------------------------------------------------------------------------

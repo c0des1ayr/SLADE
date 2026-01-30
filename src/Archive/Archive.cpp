@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -35,7 +35,6 @@
 #include "Utility/FileUtils.h"
 #include "Utility/Parser.h"
 #include "Utility/StringUtils.h"
-#include <filesystem>
 
 using namespace slade;
 
@@ -1255,10 +1254,7 @@ bool Archive::renameEntry(ArchiveEntry* entry, string_view name, bool force)
 bool Archive::importDir(string_view directory, bool ignore_hidden, shared_ptr<ArchiveDir> base)
 {
 	// Get a list of all files in the directory
-	vector<string> files;
-	for (const auto& item : std::filesystem::recursive_directory_iterator{ directory })
-		if (item.is_regular_file())
-			files.push_back(item.path().string());
+	auto files = fileutil::allFilesInDir(directory, true, true);
 
 	// Go through files
 	for (const auto& file : files)

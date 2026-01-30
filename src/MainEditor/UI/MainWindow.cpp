@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -117,7 +117,11 @@ MainWindow::MainWindow() : STopWindow("SLADE", "main")
 	custom_menus_begin_ = 2;
 
 	if (mw_maximized)
+#ifdef __WXGTK__
 		CallAfter(&MainWindow::Maximize, this);
+#else
+		MainWindow::Maximize();
+#endif
 
 	setupLayout();
 

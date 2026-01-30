@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -420,6 +420,7 @@ Palette wxutil::paletteFromWx(const wxPalette& palette)
 	Palette pal{ static_cast<unsigned>(palette.GetColoursCount()) };
 
 	ColRGBA col;
+	col.a = 255;
 	for (int a = 0; a < palette.GetColoursCount(); ++a)
 	{
 		palette.GetRGB(a, &col.r, &col.g, &col.b);

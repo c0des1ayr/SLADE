@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         https://slade.mancubus.net
@@ -30,12 +30,13 @@
 //
 // -----------------------------------------------------------------------------
 #include "Main.h"
+#include "SIFormat.h"
 #include "App.h"
-#undef BOOL
 #include "Archive/Archive.h"
 #include "Archive/EntryType/EntryType.h"
 #include "General/Misc.h"
-#include "SIFormat.h"
+#include "Utility/Memory.h"
+#include <wx/mstream.h>
 
 using namespace slade;
 
@@ -537,11 +538,9 @@ void SIFormat::initFormats()
 	new SIFRottWall();
 
 	// Jedi Engine (Dark Forces) formats
-#if 0
 	new SIFJediBM();
 	new SIFJediFME();
 	new SIFJediWAX();
-#endif
 
 	// Other game formats
 	new SIFHalfLifeTex();

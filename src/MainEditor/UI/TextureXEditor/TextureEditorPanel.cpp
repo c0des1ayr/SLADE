@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -48,12 +48,6 @@ using namespace slade;
 // Variables
 //
 // -----------------------------------------------------------------------------
-namespace
-{
-// Hack to stop the drag event being erroneously triggered when
-// double-clicking a patch in the patch browser to select it
-bool hack_nodrag = false;
-} // namespace
 CVAR(Bool, tx_apply_scale, true, CVar::Flag::Save)
 CVAR(Bool, tx_show_outside, true, CVar::Flag::Save)
 
@@ -186,20 +180,8 @@ void TextureEditorPanel::setupLayout()
 // -----------------------------------------------------------------------------
 wxPanel* TextureEditorPanel::createTextureControls(wxWindow* parent)
 {
-	// Create controls
-	const auto     spinsize  = wxSize{ ui::px(ui::Size::SpinCtrlWidth), -1 };
-	constexpr auto spinflags = wxSP_ARROW_KEYS | wxALIGN_RIGHT | wxTE_PROCESS_ENTER;
-	auto           panel     = new wxPanel(parent, -1);
-	text_tex_name_           = new wxTextCtrl(panel, -1);
-	text_tex_name_->SetMaxLength(8);
-	spin_tex_width_    = new wxSpinCtrl(panel, -1, wxEmptyString, wxDefaultPosition, spinsize, spinflags, 0, SHRT_MAX);
-	spin_tex_height_   = new wxSpinCtrl(panel, -1, wxEmptyString, wxDefaultPosition, spinsize, spinflags, 0, SHRT_MAX);
-	spin_tex_scalex_   = new wxSpinCtrl(panel, -1, wxEmptyString, wxDefaultPosition, spinsize, spinflags, 0, UCHAR_MAX);
-	spin_tex_scaley_   = new wxSpinCtrl(panel, -1, wxEmptyString, wxDefaultPosition, spinsize, spinflags, 0, UCHAR_MAX);
-	label_scaled_size_ = new wxStaticText(panel, -1, wxS("Scaled Size: N/A"));
-	cb_tex_world_panning_ = new wxCheckBox(panel, -1, wxS("World Panning"));
-
 	// Setup tex controls panel sizer
+	auto panel = new wxPanel(parent, -1);
 	auto sizer = new wxBoxSizer(wxHORIZONTAL);
 	panel->SetSizer(sizer);
 
@@ -208,6 +190,18 @@ wxPanel* TextureEditorPanel::createTextureControls(wxWindow* parent)
 	auto framesizer = new wxStaticBoxSizer(frame, wxVERTICAL);
 	sizer->Add(framesizer, 1, wxEXPAND);
 
+	// Create controls
+	const auto     spinsize  = wxSize{ ui::px(ui::Size::SpinCtrlWidth), -1 };
+	constexpr auto spinflags = wxSP_ARROW_KEYS | wxALIGN_RIGHT | wxTE_PROCESS_ENTER;
+	text_tex_name_           = new wxTextCtrl(frame, -1);
+	text_tex_name_->SetMaxLength(8);
+	spin_tex_width_    = new wxSpinCtrl(frame, -1, wxEmptyString, wxDefaultPosition, spinsize, spinflags, 0, SHRT_MAX);
+	spin_tex_height_   = new wxSpinCtrl(frame, -1, wxEmptyString, wxDefaultPosition, spinsize, spinflags, 0, SHRT_MAX);
+	spin_tex_scalex_   = new wxSpinCtrl(frame, -1, wxEmptyString, wxDefaultPosition, spinsize, spinflags, 0, UCHAR_MAX);
+	spin_tex_scaley_   = new wxSpinCtrl(frame, -1, wxEmptyString, wxDefaultPosition, spinsize, spinflags, 0, UCHAR_MAX);
+	label_scaled_size_ = new wxStaticText(frame, -1, wxS("Scaled Size: N/A"));
+	cb_tex_world_panning_ = new wxCheckBox(frame, -1, wxS("World Panning"));
+
 	auto gb_sizer = new wxGridBagSizer(ui::pad(), ui::pad());
 	framesizer->Add(gb_sizer, 1, wxALL, ui::pad());
 
@@ -215,11 +209,11 @@ wxPanel* TextureEditorPanel::createTextureControls(wxWindow* parent)
 	gb_sizer->Add(new wxStaticText(frame, -1, wxS("Name:")), { 0, 0 }, { 1, 1 }, wxALIGN_CENTER_VERTICAL);
 	gb_sizer->Add(text_tex_name_, { 0, 1 }, { 1, 1 }, wxEXPAND);
 	gb_sizer->Add(new wxStaticText(frame, -1, wxS("Size:")), { 0, 2 }, { 1, 1 }, wxALIGN_CENTER_VERTICAL);
-	gb_sizer->Add(spin_tex_width_, { 0, 3 }, { 1, 1 });
-	gb_sizer->Add(spin_tex_height_, { 0, 4 }, { 1, 1 });
+	gb_sizer->Add(spin_tex_width_, { 0, 3 }, { 1, 1 }, wxEXPAND);
+	gb_sizer->Add(spin_tex_height_, { 0, 4 }, { 1, 1 }, wxEXPAND);
 	gb_sizer->Add(new wxStaticText(frame, -1, wxS("Scale:")), { 1, 2 }, { 1, 1 }, wxALIGN_CENTER_VERTICAL);
-	gb_sizer->Add(spin_tex_scalex_, { 1, 3 }, { 1, 1 });
-	gb_sizer->Add(spin_tex_scaley_, { 1, 4 }, { 1, 1 });
+	gb_sizer->Add(spin_tex_scalex_, { 1, 3 }, { 1, 1 }, wxEXPAND);
+	gb_sizer->Add(spin_tex_scaley_, { 1, 4 }, { 1, 1 }, wxEXPAND);
 	gb_sizer->Add(label_scaled_size_, { 1, 5 }, { 1, 1 }, wxALIGN_CENTER_VERTICAL);
 	gb_sizer->Add(cb_tex_world_panning_, { 1, 0 }, { 1, 2 }, wxALIGN_CENTER_VERTICAL);
 
@@ -643,7 +637,8 @@ void TextureEditorPanel::replacePatch()
 
 	// Browse for patch
 	tx_editor_->setFullPath(false);
-	int patch = tx_editor_->browsePatchTable(pname);
+	ignore_drag_ = true;
+	int patch   = tx_editor_->browsePatchTable(pname);
 	if (patch >= 0)
 	{
 		// Go through selection and replace each patch
@@ -836,7 +831,7 @@ void TextureEditorPanel::onTexCanvasMouseEvent(wxMouseEvent& e)
 		SAction::fromId("txed_patch_forward")->addToMenu(&popup, true);
 		SAction::fromId("txed_patch_duplicate")->addToMenu(&popup, true);
 
-		hack_nodrag = true;
+		ignore_drag_ = true;
 		PopupMenu(&popup);
 	}
 
@@ -844,8 +839,8 @@ void TextureEditorPanel::onTexCanvasMouseEvent(wxMouseEvent& e)
 	else if (e.Dragging())
 	{
 		// Drag selected patches if left button is down and any patch is selected
-		if (hack_nodrag)
-			hack_nodrag = false;
+		if (ignore_drag_)
+			ignore_drag_ = false;
 		else if (e.LeftIsDown())
 		{
 			if (list_patches_->GetSelectedItemCount() > 0)
@@ -957,7 +952,7 @@ void TextureEditorPanel::onTexCanvasKeyDown(wxKeyEvent& e)
 		// Add patch
 		else if (name == "txed_patch_add")
 		{
-			hack_nodrag = true;
+			ignore_drag_ = true;
 			addPatch();
 			handled = true;
 		}
@@ -972,7 +967,7 @@ void TextureEditorPanel::onTexCanvasKeyDown(wxKeyEvent& e)
 		// Replace patch
 		else if (name == "txed_patch_replace")
 		{
-			hack_nodrag = true;
+			ignore_drag_ = true;
 			replacePatch();
 			handled = true;
 		}

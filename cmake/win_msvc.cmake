@@ -10,6 +10,11 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 # Enable big objects and utf8
 add_compile_options(/bigobj /utf-8)
 
+# NO_FLUIDSYNTH preprocessor definition
+if (NO_FLUIDSYNTH)
+	add_definitions(-DNO_FLUIDSYNTH)
+endif ()
+
 
 # Dependencies -----------------------------------------------------------------
 
@@ -39,10 +44,15 @@ if (NOT NO_FLUIDSYNTH)
 	find_package(FluidSynth CONFIG REQUIRED)
 endif ()
 
+# WebP/Png
+if (NOT BUILD_WX)
+	find_package(WebP CONFIG REQUIRED)
+	find_package(PNG REQUIRED)
+endif ()
+
 # Other
 find_package(MPG123 CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(WebP CONFIG REQUIRED)
 
 set(SFML_FIND_COMPONENTS System Audio Window Network)
 list(TRANSFORM SFML_FIND_COMPONENTS TOLOWER OUTPUT_VARIABLE SFML2_FIND_COMPONENTS)
@@ -111,9 +121,6 @@ target_link_libraries(slade
 	${WX_LIBS}
 	${ZLIB_LIBRARY}
 	MPG123::libmpg123
-	WebP::webp
-	WebP::webpdecoder
-	WebP::webpdemux
 )
 
 if (NOT NO_LUA)
@@ -122,4 +129,13 @@ endif ()
 
 if (NOT NO_FLUIDSYNTH)
 	target_link_libraries(slade FluidSynth::libfluidsynth)
+endif ()
+
+if (NOT BUILD_WX)
+	target_link_libraries(slade
+		WebP::webp
+		WebP::webpdecoder
+		WebP::webpdemux
+		PNG::PNG
+	)
 endif ()

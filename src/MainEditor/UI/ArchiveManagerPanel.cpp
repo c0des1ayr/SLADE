@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -712,7 +712,7 @@ Archive* ArchiveManagerPanel::currentArchive() const
 	else if (page->GetName() == wxS("entry"))
 	{
 		auto ep = dynamic_cast<EntryPanel*>(page);
-		return ep->entry()->parent();
+		return ep->entry() ? ep->entry()->parent() : nullptr;
 	}
 
 	// TextureXEditor
@@ -909,7 +909,12 @@ void ArchiveManagerPanel::openTextureTab(int archive_index, ArchiveEntry* entry)
 			{
 				// Selected archive already has its texture editor open, so show that tab
 				stc_archives_->SetSelection(a);
-				txed->setSelection(entry);
+				if (entry && !txed->setSelection(entry))
+				{
+					// Texture entry isn't open in the editor, open it
+					txed->openEntry(entry);
+					txed->setSelection(entry);
+				}
 				return;
 			}
 		}
@@ -918,7 +923,12 @@ void ArchiveManagerPanel::openTextureTab(int archive_index, ArchiveEntry* entry)
 		maineditor::window()->Freeze();
 		auto txed = new TextureXEditor(stc_archives_);
 		txed->Show(false);
-		if (!txed->openArchive(archive.get()))
+		bool ok = false;
+		if (entry)
+			ok = txed->openEntry(entry);
+		else
+			ok = txed->openArchive(archive.get());
+		if (!ok)
 		{
 			delete txed;
 			maineditor::window()->Thaw();
@@ -1175,7 +1185,7 @@ void ArchiveManagerPanel::closeEntryTabs(Archive* parent) const
 
 		// Check for entry parent archive match
 		auto ep = dynamic_cast<EntryPanel*>(stc_archives_->GetPage(a));
-		if (ep->entry()->parent() == parent)
+		if (ep->entry() && ep->entry()->parent() == parent)
 		{
 			// Close tab
 			ep->removeCustomMenu();
@@ -1468,7 +1478,7 @@ bool ArchiveManagerPanel::saveEntryChanges(Archive* archive) const
 		{
 			// Check for entry parent archive match
 			auto ep = dynamic_cast<EntryPanel*>(stc_archives_->GetPage(a));
-			if (ep->entry()->parent() == archive)
+			if (ep->entry() && ep->entry()->parent() == archive)
 			{
 				if (ep->isModified() && autosave_entry_changes > 0)
 				{

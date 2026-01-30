@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         https://slade.mancubus.net
@@ -116,9 +116,9 @@ void MapCanvas::draw()
 // -----------------------------------------------------------------------------
 void MapCanvas::mouseToCenter()
 {
-	auto rect   = GetScreenRect();
 	mouse_warp_ = true;
-	sf::Mouse::setPosition(sf::Vector2i(rect.x + int(rect.width * 0.5), rect.y + int(rect.height * 0.5)));
+	const wxSize size = GetSize();
+	WarpPointer(int(size.x * 0.5), int(size.y * 0.5));
 }
 
 // -----------------------------------------------------------------------------
@@ -157,24 +157,20 @@ void MapCanvas::mouseLook3d()
 		auto overlay_current = context_->currentOverlay();
 		if (!overlay_current || !overlay_current->isActive() || (overlay_current && overlay_current->allow3dMlook()))
 		{
-			// Get relative mouse movement (scale with dpi on macOS and Linux)
-			const bool   useScaleFactor = (app::platform() == app::MacOS || app::platform() == app::Linux);
-			const double scale          = useScaleFactor ? GetContentScaleFactor() : 1.;
-			const double threshold      = scale - 1.0;
+			// Get relative mouse movement
+			const wxPoint mouse_screen_pos = wxGetMousePosition();
+			const wxPoint mouse_client_pos = ScreenToClient(mouse_screen_pos);
 
-			wxRealPoint mouse_pos = wxGetMousePosition();
-			mouse_pos.x *= scale;
-			mouse_pos.y *= scale;
+			const wxSize size              = GetSize();
+			double xrel                    = mouse_client_pos.x - floor(size.x * 0.5);
+			double yrel                    = mouse_client_pos.y - floor(size.y * 0.5);
 
-			const wxRealPoint screen_pos = GetScreenPosition();
-			const double      xpos       = mouse_pos.x - screen_pos.x;
-			const double      ypos       = mouse_pos.y - screen_pos.y;
+			// Scale from logical to physical pixels for consistent movement on HiDPI displays
+			const double scale             = GetContentScaleFactor();
+			xrel *= scale;
+			yrel *= scale;
 
-			const wxSize size = GetSize();
-			const double xrel = xpos - floor(size.x * 0.5);
-			const double yrel = ypos - floor(size.y * 0.5);
-
-			if (fabs(xrel) > threshold || fabs(yrel) > threshold)
+			if (fabs(xrel) > 0 || fabs(yrel) > 0)
 			{
 				context_->renderer().renderer3D().cameraLook(xrel, yrel);
 				mouseToCenter();
@@ -355,27 +351,29 @@ void MapCanvas::onMouseDown(wxMouseEvent& e)
 
 	// Send to editor context
 	bool skip = true;
+	auto x    = e.GetX() * GetContentScaleFactor();
+	auto y    = e.GetY() * GetContentScaleFactor();
 	context_->input().updateKeyModifiersWx(e.GetModifiers());
 	if (e.LeftDown())
-		skip = context_->input().mouseDown(Input::MouseButton::Left);
+		skip = context_->input().mouseDown(Input::MouseButton::Left, x, y);
 	else if (e.LeftDClick())
-		skip = context_->input().mouseDown(Input::MouseButton::Left, true);
+		skip = context_->input().mouseDown(Input::MouseButton::Left, x, y, true);
 	else if (e.RightDown())
-		skip = context_->input().mouseDown(Input::MouseButton::Right);
+		skip = context_->input().mouseDown(Input::MouseButton::Right, x, y);
 	else if (e.RightDClick())
-		skip = context_->input().mouseDown(Input::MouseButton::Right, true);
+		skip = context_->input().mouseDown(Input::MouseButton::Right, x, y, true);
 	else if (e.MiddleDown())
-		skip = context_->input().mouseDown(Input::MouseButton::Middle);
+		skip = context_->input().mouseDown(Input::MouseButton::Middle, x, y);
 	else if (e.MiddleDClick())
-		skip = context_->input().mouseDown(Input::MouseButton::Middle, true);
+		skip = context_->input().mouseDown(Input::MouseButton::Middle, x, y, true);
 	else if (e.Aux1Down())
-		skip = context_->input().mouseDown(Input::MouseButton::Mouse4);
+		skip = context_->input().mouseDown(Input::MouseButton::Mouse4, x, y);
 	else if (e.Aux1DClick())
-		skip = context_->input().mouseDown(Input::MouseButton::Mouse4, true);
+		skip = context_->input().mouseDown(Input::MouseButton::Mouse4, x, y, true);
 	else if (e.Aux2Down())
-		skip = context_->input().mouseDown(Input::MouseButton::Mouse5);
+		skip = context_->input().mouseDown(Input::MouseButton::Mouse5, x, y);
 	else if (e.Aux2DClick())
-		skip = context_->input().mouseDown(Input::MouseButton::Mouse5, true);
+		skip = context_->input().mouseDown(Input::MouseButton::Mouse5, x, y, true);
 
 	if (skip)
 	{

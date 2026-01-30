@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -975,6 +975,7 @@ bool GfxEntryPanel::handleEntryPanelAction(string_view id)
 			auto* format = gcd.itemFormat(0);
 
 			// Write converted image back to entry
+			image->setPalette(gcd.itemPalette(0));
 			format->saveImage(*image, entry_data_, gcd.itemPalette(0));
 			// This makes the "save" button (and the setModified stuff) redundant and confusing!
 			// The alternative is to save to entry effectively (uncomment the importMemChunk line)

@@ -1,7 +1,7 @@
 
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -714,7 +714,8 @@ void BrowserCanvas::onKeyDown(wxKeyEvent& e)
 {
 	const wxSize size     = GetSize() * GetContentScaleFactor();
 	int          num_cols = size.x / fullItemSizeX();
-	int          offset;
+	int          selected = itemIndex(item_selected_);
+	int          offset   = 0;
 
 	// Down arrow
 	if (e.GetKeyCode() == WXK_DOWN)
@@ -740,18 +741,29 @@ void BrowserCanvas::onKeyDown(wxKeyEvent& e)
 	else if (e.GetKeyCode() == WXK_PAGEDOWN)
 		offset = num_cols * max(size.y / fullItemSizeY(), 1);
 
+	// Home
+	else if (e.GetKeyCode() == WXK_HOME)
+		selected = 0;
+
+	// End
+	else if (e.GetKeyCode() == WXK_END)
+		selected = (int)items_filter_.size() - 1;
+
 	else
 	{
 		e.Skip();
 		return;
 	}
 
-	// Clamp selection
-	int selected = itemIndex(item_selected_) + offset;
-	if (selected < 0)
-		selected = 0;
-	else if (selected >= (int)items_filter_.size())
-		selected = (int)items_filter_.size() - 1;
+	// Adjust selected item by offset (and clamp)
+	if (offset != 0)
+	{
+		selected += offset;
+		if (selected < 0)
+			selected = 0;
+		else if (selected >= (int)items_filter_.size())
+			selected = (int)items_filter_.size() - 1;
+	}
 
 	selectItem(selected);
 	showItem(selected, -1 * offset);

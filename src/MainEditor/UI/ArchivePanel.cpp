@@ -1,7 +1,7 @@
-
+﻿
 // -----------------------------------------------------------------------------
 // SLADE - It's a Doom Editor
-// Copyright(C) 2008 - 2022 Simon Judd
+// Copyright(C) 2008 - 2026 Simon Judd
 //
 // Email:       sirjuddington@gmail.com
 // Web:         http://slade.mancubus.net
@@ -2028,6 +2028,7 @@ bool ArchivePanel::gfxConvert() const
 	undo_manager_->beginRecord("Gfx Format Conversion");
 
 	// Write any changes
+	entry_tree_->Freeze();
 	for (unsigned a = 0; a < selection.size(); a++)
 	{
 		// Update splash window
@@ -2044,11 +2045,13 @@ bool ArchivePanel::gfxConvert() const
 
 		// Write converted image back to entry
 		MemChunk mc;
+		image->setPalette(gcd.itemPalette(a));
 		format->saveImage(*image, mc, gcd.itemPalette(a));
 		selection[a]->importMemChunk(mc);
 		EntryType::detectEntryType(*selection[a]);
 		selection[a]->setExtensionByType();
 	}
+	entry_tree_->Thaw();
 
 	// Finish recording undo level
 	undo_manager_->endRecord(true);
